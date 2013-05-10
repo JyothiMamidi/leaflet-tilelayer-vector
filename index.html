@@ -1,79 +1,132 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Leaflet GeoJSON tile layer example</title>
+    <title>Leaflet vector tile layer example</title>
+    <meta charset="utf-8" />
 
-    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.4.3/leaflet.css" />
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.5.1/leaflet.css" />
     <!--[if lte IE 8]>
-        <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.4.3/leaflet.ie.css" />
+        <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.5.1/leaflet.ie.css" />
     <![endif]-->
-    <script src="http://cdn.leafletjs.com/leaflet-0.4.3/leaflet.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <link rel="stylesheet" href="http://leaflet.github.io/Leaflet.label/leaflet.label.css" />
+    
+    <script src="http://cdn.leafletjs.com/leaflet-0.5.1/leaflet.js"></script>
+    <script src="http://leaflet.github.io/Leaflet.label/leaflet.label.js"></script>
+    
     <script src="TileLayer.GeoJSON.js"></script>
+    <script src="TileLayer.Vector.Unclipped.js"></script>
 
     <style type="text/css">
-    html, body, map {
+    html, body, #map {
         margin: 0;
         padding: 0;
         width: 100%;
         height: 100%;
     }
-    .geojson-dialog-hover {
-        background: #EEE;
-        border: 1px solid #DDD;
-        border-radius: 5px;
-        color: #333;
-        font-family: sans-serif;
-        font-size: small;
-        margin: 0;
-        padding: 3px;
-    }
-    .geojson-dialog-hover p {
-        margin: 0 0 5px 0;
-        padding: 0;
-    }
-    .geojson-feature-property-name {
-        font-weight: bold;
-        margin-right: 5px;
-    }
     </style>
 </head>
 
 <body>
-    <div id="map" style="width: 100%; height: 100%; border: 1px solid #ccc"></div>
+    <div id="map"></div>
 
     <script type="text/javascript">
-    
-    var map = new L.Map('map'),
-        cloudmadeUrl = 'http://{s}.tile.cloudmade.com/1a1b06b230af4efdbb989ea99e9841af/997/256/{z}/{x}/{y}.png',
-        cloudmadeAttribution = 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade';
-    
-    map.setView(new L.LatLng(38.617, -100.261), 5);
+    var cloudmadeUrl = 'http://{s}.tile.cloudmade.com/1a1b06b230af4efdbb989ea99e9841af/997/256/{z}/{x}/{y}.png',
+        cloudmadeAttribution = 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, '
+        + 'Imagery &copy; <a href="http://cloudmade.com">CloudMade</a>';
 
-    var baseLayer = new L.TileLayer(cloudmadeUrl, { attribution: cloudmadeAttribution});
-    map.addLayer(baseLayer);
+    var background = L.tileLayer(cloudmadeUrl, { attribution: cloudmadeAttribution });
 
-    var geojsonURL = 'http://polymaps.appspot.com/county/{z}/{x}/{y}.json';
-    var geojsonLayer = new L.TileLayer.GeoJSON(geojsonURL);
+    // default style of feature
+    var style = {
+        "color": "#1B1",
+        "fillColor": "#1B1",
+        "weight": 0.7,
+        "opacity": 0.3,
+        "fillOpacity": 0.1
+    };
+    // style of feature when hovered
+    var highlightStyle = {
+        "color": "#000",
+        "weight": 1.5,
+        "fillOpacity": 0.4
+    };
 
-    geojsonLayer.setGeoJSONOptions({
-        /* style of GeoJSON feature */
-        style: {
-            "color": "#1B1",
-            "fillColor": "#1B1",
-            "weight": 0.7,
-            "opacity": 0.3,
-            "fillOpacity": 0.1
-        },
-        /* style of GeoJSON feature when hovered */
-        hoverStyle: {
-            "fillOpacity": 0.4
-        },
-        hoverOffset: new L.Point(30,-16)
+    function highlightFeature(e) {
+        var layer = e.target;
+        layer.setStyle(highlightStyle);
+
+        if (!L.Browser.ie && !L.Browser.opera) {
+            layer.bringToFront();
+        }
+    }
+
+    function resetHighlight(e) {
+        var layer = e.target;
+        layer.setStyle(style);
+    }
+
+    function onEachFeature(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature,
+            mouseout: resetHighlight
+        });
+        layer.bindLabel(feature.properties.name);
+        layer.bindPopup(feature.id + '<br>' + feature.properties.name);
+    }
+
+    // patch Leaflet.label plugin to avoid null error on viewreset when label has
+    // already been removed (v0.5.1), also see comment in L.TileLayer.Vector.onAdd 
+    var orig = L.Label.prototype._updatePosition;
+    L.Label.prototype._updatePosition = function() {
+        if (this._map) {
+            orig.apply(this, arguments);
+        }
+    };
+
+    // filters out invalid (empty) geometries in Polymaps county dataset
+    // to avoid exceptions in L.GeoJSON
+    function filterInvalidGeometry(feature) {
+        return feature.geometry.type !== undefined;
+    };
+
+    var vectorOptions = {
+        style: style,
+        onEachFeature: onEachFeature,
+        filter: filterInvalidGeometry
+    };
+
+    var url = 'http://polymaps.appspot.com/county/{z}/{x}/{y}.json';
+    var options = {
+        // remove tiles outside viewport
+        unloadInvisibleTiles: true,
+        // no tile loading while panning (slow with large vector tiles)
+        updateWhenIdle: true
+    };
+    var vector = new L.TileLayer.Vector(url, options, vectorOptions);
+
+    // unloadInvisibleTiles and updateWhenIdle with default values 
+    // (false for non-mobile) for comparison
+    var unclippedOptions = {
+        unique: function(feature) {
+            return feature.id;
+        }
+    };
+    var unclipped = new L.TileLayer.Vector.Unclipped(url, unclippedOptions, vectorOptions);
+
+    var map = L.map('map', {
+        center: new L.LatLng(38.617, -100.261),
+        zoom: 5,
+        layers: [background, vector] 
     });
 
-    map.addLayer(geojsonLayer);
-
+    var overlayMaps = {
+        'Vector': vector,
+        'Vector.Unclipped': unclipped
+    };
+    // add as base to switch with radio instead of checkbox
+    L.control.layers(overlayMaps, {}, {
+        collapsed: false
+    }).addTo(map);
     </script>
 </body>
 </html>
