@@ -1,21 +1,13 @@
 // Load data tiles using the JQuery ajax function
 L.TileLayer.Ajax = L.TileLayer.extend({
     _requests: [],
-    _data: [],
-    data: function () {
-        for (var t in this._tiles) {
-            var tile = this._tiles[t];
-            if (!tile.processed) {
-                this._data = this._data.concat(tile.datum);
-                tile.processed = true;
-            }
-        }
-        return this._data;
-    },
     _addTile: function(tilePoint, container) {
-        var tile = { datum: null, processed: false };
+        var tile = { datum: null };
         this._tiles[tilePoint.x + ':' + tilePoint.y] = tile;
         this._loadTile(tile, tilePoint);
+    },
+    _addTileData: function(tile) {
+        // override in subclass
     },
     // XMLHttpRequest handler; closure over the XHR object, the layer, and the tile
     _xhrHandler: function (req, layer, tile) {
@@ -26,7 +18,7 @@ L.TileLayer.Ajax = L.TileLayer.extend({
             var s = req.status;
             if ((s >= 200 && s < 300) || s == 304) {
                 tile.datum = JSON.parse(req.responseText);
-                layer._tileLoaded();
+                layer._addTileData(tile);
             } else {
                 layer._tileLoaded();
             }
@@ -42,13 +34,12 @@ L.TileLayer.Ajax = L.TileLayer.extend({
         req.open('GET', this.getTileUrl(tilePoint), true);
         req.send();
     },
-    _resetCallback: function() {
-        this._data = [];
-        L.TileLayer.prototype._resetCallback.apply(this, arguments);
+    _reset: function() {
         for (var i in this._requests) {
             this._requests[i].abort();
         }
         this._requests = [];
+        L.TileLayer.prototype._reset.apply(this, arguments);
     },
     _update: function() {
         if (this._map._panTransition && this._map._panTransition._inProgress) { return; }
@@ -57,57 +48,74 @@ L.TileLayer.Ajax = L.TileLayer.extend({
     }
 });
 
-L.TileLayer.GeoJSON = L.TileLayer.Ajax.extend({
-    _geojson: {"type":"FeatureCollection","features":[]},
-    initialize: function (url, options, geojsonOptions) {
+L.TileLayer.Vector = L.TileLayer.Ajax.extend({
+    options: {
+        layerFactory: L.geoJson
+    },
+    initialize: function (url, options, vectorOptions) {
         L.TileLayer.Ajax.prototype.initialize.call(this, url, options);
-        this.geojsonLayer = new L.GeoJSON(this._geojson, geojsonOptions);
-        this.geojsonOptions = geojsonOptions;
+        this.vectorOptions = vectorOptions || {};
     },
     onAdd: function (map) {
         this._map = map;
         L.TileLayer.Ajax.prototype.onAdd.call(this, map);
-        this.on('load', this._tilesLoaded);
-        map.addLayer(this.geojsonLayer);
+        this.on('tileunload', this._unloadTile);
+        // root vector layer, contains tile vector layers as children 
+        this.vectorLayer = this._createVectorLayer(); 
+        map.addLayer(this.vectorLayer);
+
+        // workaround for v0.5.1:
+        // Error in projectLatlngs because L.Path._map is null, when layer has been removed 
+        // in the same viewreset event (tileunload) and listeners are not removed yet.
+        // Not needed for current master (> v0.5.1), because listeners are removed immediately.
+        // 
+        // Simply removes viewreset listeners right after they have been added, assuming that 
+        // we always remove layers on viewreset and therefore projectLatlngs is unnecessary. 
+        map.on('layeradd', this._removeViewresetForPaths, this);
     },
     onRemove: function (map) {
-        map.removeLayer(this.geojsonLayer);
-        this.off('load', this._tilesLoaded);
-        L.TileLayer.Ajax.prototype.onRemove.call(this, map);
-    },
-    data: function () {
-        this._geojson.features = [];
-        if (this.options.unique) {
-            this._uniqueKeys = {};
-        }
-        var tileData = L.TileLayer.Ajax.prototype.data.call(this);
-        for (var t in tileData) {
-            var tileDatum = tileData[t];
-            if (tileDatum && tileDatum.features) {
+        // unload tiles (L.TileLayer only calls _reset in onAdd)
+        this._reset();
+        map.removeLayer(this.vectorLayer);
 
-                // deduplicate features by using the string result of the unique function
-                if (this.options.unique) {
-                    for (var f in tileDatum.features) {
-                        var featureKey = this.options.unique(tileDatum.features[f]);
-                        if (this._uniqueKeys.hasOwnProperty(featureKey)) {
-                            delete tileDatum.features[f];
-                        }
-                        else {
-                            this._uniqueKeys[featureKey] = featureKey;
-                        }
-                    }
-                }
-                this._geojson.features =
-                    this._geojson.features.concat(tileDatum.features);
+        L.TileLayer.Ajax.prototype.onRemove.call(this, map);
+
+        this.off('tileunload', this._unloadTile);
+        map.off('layeradd', this._removeViewresetForPaths, this);
+
+        this.vectorLayer = null;
+        this._map = null;
+    },
+    _createVectorLayer: function() {
+        return this.options.layerFactory(null, this.vectorOptions);
+    },
+    _removeViewresetForPaths: function(evt) {
+        var layer = evt.layer;
+        if (layer.projectLatlngs) {
+            map.off('viewreset', layer.projectLatlngs, layer);
+        }
+    },
+    _createTileLayer: function() {
+        return this._createVectorLayer();
+    },
+    _addTileData: function(tile) {
+        try {
+            var tileLayer = this._createTileLayer();
+            tileLayer.addData(tile.datum);
+            tile.layer = tileLayer;
+            this.vectorLayer.addLayer(tileLayer);
+        } catch (e) {
+            console.error(e.toString());
+        }
+        this._tileLoaded();
+    },
+    _unloadTile: function(evt) {
+        var tileLayer = evt.tile.layer;
+        if (tileLayer) {
+            // L.LayerGroup.hasLayer > v0.5.1 only 
+            if (this.vectorLayer._layers[L.stamp(tileLayer)]) {
+                this.vectorLayer.removeLayer(tileLayer);
             }
         }
-        return this._geojson;
-    },
-    _resetCallback: function () {
-        this._geojson.features = [];
-        L.TileLayer.Ajax.prototype._resetCallback.apply(this, arguments);
-    },
-    _tilesLoaded: function (evt) {
-        this.geojsonLayer.clearLayers().addData(this.data());
     }
 });
