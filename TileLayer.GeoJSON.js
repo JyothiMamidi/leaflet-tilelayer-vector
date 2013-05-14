@@ -91,8 +91,8 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
     },
     _removeViewresetForPaths: function(evt) {
         var layer = evt.layer;
-        if (layer.projectLatlngs) {
-            map.off('viewreset', layer.projectLatlngs, layer);
+        if (layer.projectLatlngs && this._map) {
+            this._map.off('viewreset', layer.projectLatlngs, layer);
         }
     },
     _createTileLayer: function() {
