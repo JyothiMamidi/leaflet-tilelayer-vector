@@ -50,16 +50,29 @@ L.TileLayer.Ajax = L.TileLayer.extend({
 
 L.TileLayer.Vector = L.TileLayer.Ajax.extend({
     options: {
-        layerFactory: L.geoJson
+        // factory function to create the vector tile layers (defaults to L.GeoJSON)
+        layerFactory: L.geoJson,
+        // List of available server zoom levels in ascending order. Empty means all  
+        // client zooms are available (default). Allows to only request tiles at certain
+        // zooms and resizes tiles on the other zooms.
+        serverZooms: []
     },
     initialize: function (url, options, vectorOptions) {
         L.TileLayer.Ajax.prototype.initialize.call(this, url, options);
+        this.options.tileSizeOrig = this.options.tileSize;
+        this.options.zoomOffsetOrig = this.options.zoomOffset;
         this.vectorOptions = vectorOptions || {};
     },
     onAdd: function (map) {
         this._map = map;
+        
+        this._updateZoom();
+
         L.TileLayer.Ajax.prototype.onAdd.call(this, map);
+
+        map.on('viewreset', this._updateZoom, this);
         this.on('tileunload', this._unloadTile);
+
         // root vector layer, contains tile vector layers as children 
         this.vectorLayer = this._createVectorLayer(); 
         map.addLayer(this.vectorLayer);
@@ -81,6 +94,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         L.TileLayer.Ajax.prototype.onRemove.call(this, map);
 
         this.off('tileunload', this._unloadTile);
+        map.off('viewreset', this._updateZoom, this);
         map.off('layeradd', this._removeViewresetForPaths, this);
 
         this.vectorLayer = null;
@@ -117,5 +131,43 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
                 this.vectorLayer.removeLayer(tileLayer);
             }
         }
+    },
+    // on zoom change get the appropriate server zoom for the current zoom and 
+    // adjust tileSize and zoomOffset if no server zoom at this level 
+    _updateZoom: function() {
+        var zoomChanged = (this._zoom !== this._map.getZoom());
+        this._zoom = this._map.getZoom();
+
+        if (zoomChanged) {
+            var serverZoom = this._getServerZoom(),
+                zoom = this._zoom,
+                tileSizeOrig = this.options.tileSizeOrig,
+                zoomOffsetOrig = this.options.zoomOffsetOrig;
+                
+            this.options.tileSize = Math.floor(tileSizeOrig * Math.pow(2, (zoom + zoomOffsetOrig) - serverZoom));
+            this.options.zoomOffset = serverZoom - (zoom + zoomOffsetOrig);
+            console.log('tileSize = ' + this.options.tileSize + ', zoomOffset = ' + this.options.zoomOffset + ', serverZoom = ' + serverZoom + ', zoom = ' + this._zoom);
+        }
+    },
+    // Returns the appropriate server zoom to request tiles for the current zoom level.
+    // Next lower or equal server zoom to current zoom, or minimum server zoom if no lower 
+    // (should be restricted by setting minZoom to avoid loading too many tiles).
+    _getServerZoom: function() {
+        var zoom = this._zoom,
+            serverZooms = this.options.serverZooms,
+            result = zoom;
+        // expects serverZooms to be sorted ascending
+        for (var i = 0, len = serverZooms.length; i < len; i++) {
+            if (serverZooms[i] <= zoom) {
+                result = serverZooms[i];
+            } else {
+                if (i === 0) {
+                    // zoom < smallest serverZoom
+                    result = serverZooms[0];
+                }
+                break;
+            }
+        }
+        return result;
     }
 });
