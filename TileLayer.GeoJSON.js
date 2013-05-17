@@ -2,8 +2,9 @@
 L.TileLayer.Ajax = L.TileLayer.extend({
     _requests: [],
     _addTile: function(tilePoint, container) {
-        var tile = { datum: null };
-        this._tiles[tilePoint.x + ':' + tilePoint.y] = tile;
+        var key = tilePoint.x + ':' + tilePoint.y;
+        var tile = { key: key, datum: null };
+        this._tiles[key] = tile;
         this._loadTile(tile, tilePoint);
     },
     _addTileData: function(tile) {
@@ -42,6 +43,7 @@ L.TileLayer.Ajax = L.TileLayer.extend({
         L.TileLayer.prototype._reset.apply(this, arguments);
     },
     _update: function() {
+        //console.log('_update');
         if (this._map._panTransition && this._map._panTransition._inProgress) { return; }
         if (this._tilesToLoad < 0) this._tilesToLoad = 0;
         L.TileLayer.prototype._update.apply(this, arguments);
@@ -57,6 +59,8 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         // zooms and resizes tiles on the other zooms.
         serverZooms: []
     },
+    _addQueue: [],
+    _addQueueTimeout: null,
     initialize: function (url, options, vectorOptions) {
         L.TileLayer.Ajax.prototype.initialize.call(this, url, options);
         this.options.tileSizeOrig = this.options.tileSize;
@@ -112,25 +116,73 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
     _createTileLayer: function() {
         return this._createVectorLayer();
     },
-    _addTileData: function(tile) {
-        try {
-            var tileLayer = this._createTileLayer();
-            tileLayer.addData(tile.datum);
-            tile.layer = tileLayer;
-            this.vectorLayer.addLayer(tileLayer);
-        } catch (e) {
-            console.error(e.toString());
+    _addTileData: function(aTile) {
+        //console.log('_addTileData ' + aTile.key);
+        this._addQueue.push(aTile);
+        if (!this._addQueueTimeout) {
+            this._addQueueTimeout = setTimeout(L.bind(function(){
+                var time, timeout, start = +new Date, tile;
+
+                // handle empty elements, see _deleteFromAddQueue
+                do { 
+                    tile = this._addQueue.shift();
+                }
+                while (!tile && this._addQueue.length > 0);
+
+                if (tile) {
+                    //console.log('adding ' + tile.key + ' ...');
+                    
+                    try {
+                        var tileLayer = this._createTileLayer();
+                        tileLayer.addData(tile.datum);
+                        tile.layer = tileLayer;
+                        this.vectorLayer.addLayer(tileLayer);
+                    } catch (e) {
+                        console.error(e.toString());
+                    }
+                    this._tileLoaded();
+
+                    // pause a percentage of adding time to keep UI responsive
+                    time = +new Date - start;
+                    timeout = Math.floor(time * 0.3);
+                    //console.log('added  ' + tile.key + ' (' + time + 'ms > ' + timeout + 'ms) - ' + this._tilesToLoad);
+                    this._addQueueTimeout = setTimeout(L.bind(arguments.callee, this), timeout);
+                } else {
+                    this._addQueueTimeout = null;
+                }
+            }, this), 0);
         }
-        this._tileLoaded();
     },
     _unloadTile: function(evt) {
         var tileLayer = evt.tile.layer;
+        this._deleteFromAddQueue(evt.tile);
         if (tileLayer) {
             // L.LayerGroup.hasLayer > v0.5.1 only 
             if (this.vectorLayer._layers[L.stamp(tileLayer)]) {
                 this.vectorLayer.removeLayer(tileLayer);
             }
         }
+    },
+    _deleteFromAddQueue: function(tile) {
+        var key = tile.key, 
+            val;
+        for (var i = 0, len = this._addQueue.length; i < len; i++) {
+            val = this._addQueue[i];
+            if (val && val.key === key) {
+                //console.log('##### delete ' + key);
+                // set entry to undefined only for better performance (?) - 
+                // queue consumer needs to handle empty entries!
+                delete this._addQueue[i];
+            }
+        }
+    },
+    _reset: function() {
+        L.TileLayer.Ajax.prototype._reset.apply(this, arguments);
+        if (this._addQueueTimeout) {
+            clearTimeout(this._addQueueTimeout);
+            this._addQueueTimeout = null;
+        }
+        this._addQueue = [];
     },
     // on zoom change get the appropriate server zoom for the current zoom and 
     // adjust tileSize and zoomOffset if no server zoom at this level 
@@ -146,7 +198,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
                 
             this.options.tileSize = Math.floor(tileSizeOrig * Math.pow(2, (zoom + zoomOffsetOrig) - serverZoom));
             this.options.zoomOffset = serverZoom - (zoom + zoomOffsetOrig);
-            console.log('tileSize = ' + this.options.tileSize + ', zoomOffset = ' + this.options.zoomOffset + ', serverZoom = ' + serverZoom + ', zoom = ' + this._zoom);
+            //console.log('tileSize = ' + this.options.tileSize + ', zoomOffset = ' + this.options.zoomOffset + ', serverZoom = ' + serverZoom + ', zoom = ' + this._zoom);
         }
     },
     // Returns the appropriate server zoom to request tiles for the current zoom level.
