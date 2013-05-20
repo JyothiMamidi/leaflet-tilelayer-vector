@@ -70,8 +70,10 @@
             mouseover: highlightFeature,
             mouseout: resetHighlight
         });
-        layer.bindLabel(feature.properties.name);
-        layer.bindPopup(feature.id + '<br>' + feature.properties.name);
+        if (feature.properties) {
+            layer.bindLabel(feature.properties.name);
+            layer.bindPopup(feature.id + '<br>' + feature.properties.name);
+        }
     }
 
     // patch Leaflet.label plugin to avoid null error on viewreset when label has
@@ -86,7 +88,8 @@
     // filters out invalid (empty) geometries in Polymaps county dataset
     // to avoid exceptions in L.GeoJSON
     function filterInvalidGeometry(feature) {
-        return feature.geometry.type !== undefined;
+        var geometry = feature.type === 'Feature' ? feature.geometry : feature;
+        return geometry.type !== undefined;
     };
 
     var vectorOptions = {
