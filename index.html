@@ -15,6 +15,7 @@
     
     <script src="TileLayer.GeoJSON.js"></script>
     <script src="TileLayer.Vector.Unclipped.js"></script>
+    <script src="TileLayer.Vector.Debug.js"></script>
 
     <style type="text/css">
     html, body, #map {
@@ -70,8 +71,10 @@
             mouseover: highlightFeature,
             mouseout: resetHighlight
         });
-        layer.bindLabel(feature.properties.name);
-        layer.bindPopup(feature.id + '<br>' + feature.properties.name);
+        if (feature.properties) {
+            layer.bindLabel(feature.properties.name);
+            layer.bindPopup(feature.id + '<br>' + feature.properties.name);
+        }
     }
 
     // patch Leaflet.label plugin to avoid null error on viewreset when label has
@@ -86,7 +89,8 @@
     // filters out invalid (empty) geometries in Polymaps county dataset
     // to avoid exceptions in L.GeoJSON
     function filterInvalidGeometry(feature) {
-        return feature.geometry.type !== undefined;
+        var geometry = feature.type === 'Feature' ? feature.geometry : feature;
+        return geometry.type !== undefined;
     };
 
     var vectorOptions = {
@@ -100,7 +104,9 @@
         // remove tiles outside viewport
         unloadInvisibleTiles: true,
         // no tile loading while panning (slow with large vector tiles)
-        updateWhenIdle: true
+        updateWhenIdle: true,
+        serverZooms: [3,4,5,6,7],
+        minZoom: 2
     };
     var vector = new L.TileLayer.Vector(url, options, vectorOptions);
 
@@ -113,6 +119,9 @@
     };
     var unclipped = new L.TileLayer.Vector.Unclipped(url, unclippedOptions, vectorOptions);
 
+    // debug layer (full layer, not an overlay yet)
+    var debug = new L.TileLayer.Vector.Debug(url, options, vectorOptions);
+
     var map = L.map('map', {
         center: new L.LatLng(38.617, -100.261),
         zoom: 5,
@@ -121,7 +130,8 @@
 
     var overlayMaps = {
         'Vector': vector,
-        'Vector.Unclipped': unclipped
+        'Vector.Unclipped': unclipped,
+        'Vector.Debug': debug
     };
     // add as base to switch with radio instead of checkbox
     L.control.layers(overlayMaps, {}, {
