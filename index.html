@@ -15,6 +15,7 @@
     
     <script src="TileLayer.GeoJSON.js"></script>
     <script src="TileLayer.Vector.Unclipped.js"></script>
+    <script src="TileLayer.Vector.Debug.js"></script>
 
     <style type="text/css">
     html, body, #map {
@@ -118,6 +119,9 @@
     };
     var unclipped = new L.TileLayer.Vector.Unclipped(url, unclippedOptions, vectorOptions);
 
+    // debug layer (full layer, not an overlay yet)
+    var debug = new L.TileLayer.Vector.Debug(url, options, vectorOptions);
+
     var map = L.map('map', {
         center: new L.LatLng(38.617, -100.261),
         zoom: 5,
@@ -126,7 +130,8 @@
 
     var overlayMaps = {
         'Vector': vector,
-        'Vector.Unclipped': unclipped
+        'Vector.Unclipped': unclipped,
+        'Vector.Debug': debug
     };
     // add as base to switch with radio instead of checkbox
     L.control.layers(overlayMaps, {}, {
