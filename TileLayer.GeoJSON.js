@@ -18,9 +18,11 @@ L.TileLayer.Ajax = L.TileLayer.extend({
             }
             var s = req.status;
             if ((s >= 200 && s < 300) || s == 304) {
+                layer.fire('tileresponse', {tile: tile, request: req});
                 tile.datum = JSON.parse(req.responseText);
                 layer._addTileData(tile);
             } else {
+                layer.fire('tileerror', {tile: tile});
                 layer._tileLoaded();
             }
         }
@@ -32,6 +34,7 @@ L.TileLayer.Ajax = L.TileLayer.extend({
         var req = new XMLHttpRequest();
         this._requests.push(req);
         req.onreadystatechange = this._xhrHandler(req, layer, tile);
+        this.fire('tilerequest', {tile: tile, request: req});
         req.open('GET', this.getTileUrl(tilePoint), true);
         req.send();
     },
@@ -140,6 +143,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
                     } catch (e) {
                         console.error(e.toString());
                     }
+                    this.fire('tileload', {tile: tile});
                     this._tileLoaded();
 
                     // pause a percentage of adding time to keep UI responsive
