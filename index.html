@@ -103,7 +103,9 @@
         // remove tiles outside viewport
         unloadInvisibleTiles: true,
         // no tile loading while panning (slow with large vector tiles)
-        updateWhenIdle: true
+        updateWhenIdle: true,
+        serverZooms: [3,4,5,6,7],
+        minZoom: 2
     };
     var vector = new L.TileLayer.Vector(url, options, vectorOptions);
 
