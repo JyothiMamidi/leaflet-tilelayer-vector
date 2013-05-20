@@ -3,16 +3,16 @@ L.TileLayer.Vector.Debug = L.TileLayer.Vector.extend({
     _requestCount: 0,
 
     onAdd: function (map) {
-        L.TileLayer.Vector.prototype.onAdd.apply(this, arguments);
         this.on('tilerequest', this._onTileRequest, this);
         this.on('tileresponse', this._onTileResponse, this);
         this.on('tileload', this._onTileLoad, this);
+        L.TileLayer.Vector.prototype.onAdd.apply(this, arguments);
     },
 
     onRemove: function (map) {
         L.TileLayer.Vector.prototype.onRemove.apply(this, arguments);
-        this.of('tilerequest', this._onTileRequest, this);
-        this.of('tileresponse', this._onTileResponse, this);
+        this.off('tilerequest', this._onTileRequest, this);
+        this.off('tileresponse', this._onTileResponse, this);
         this.off('tileload', this._onTileLoad, this);
     },
 
