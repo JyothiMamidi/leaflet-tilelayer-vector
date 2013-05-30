@@ -6,6 +6,8 @@ L.TileLayer.Vector.Debug = L.TileLayer.Vector.extend({
         this.on('tilerequest', this._onTileRequest, this);
         this.on('tileresponse', this._onTileResponse, this);
         this.on('tileload', this._onTileLoad, this);
+        this.on('tileunload', this._onTileUnload, this);
+        map.on('moveend', this._onMoveend, this);
         L.TileLayer.Vector.prototype.onAdd.apply(this, arguments);
     },
 
@@ -14,6 +16,8 @@ L.TileLayer.Vector.Debug = L.TileLayer.Vector.extend({
         this.off('tilerequest', this._onTileRequest, this);
         this.off('tileresponse', this._onTileResponse, this);
         this.off('tileload', this._onTileLoad, this);
+        this.off('tileunload', this._onTileUnload, this);
+        map.off('moveend', this._onMoveend, this);
     },
 
     _onTileRequest: function(evt) {
@@ -76,5 +80,13 @@ L.TileLayer.Vector.Debug = L.TileLayer.Vector.extend({
         textEle.appendChild(textNode);
 
         lBounds._container.appendChild(textEle);
+    },
+    
+    _onTileUnload: function(evt) {
+        console.log('unload       : ' + evt.tile.key);
+    },
+    
+    _onMoveend: function(evt) {
+        console.log('--- update ---');
     }
 });
