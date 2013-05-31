@@ -1,6 +1,13 @@
 // Load data tiles using the JQuery ajax function
 L.TileLayer.Ajax = L.TileLayer.extend({
-    _requests: [],
+    onAdd: function (map) {
+        L.TileLayer.prototype.onAdd.call(this, map);
+        this.on('tileunload', this._unloadTile);
+    },
+    onRemove: function (map) {
+        L.TileLayer.prototype.onRemove.call(this, map);
+        this.off('tileunload', this._unloadTile);
+    },
     _addTile: function(tilePoint, container) {
         var key = tilePoint.x + ':' + tilePoint.y;
         var tile = { key: key, datum: null };
@@ -18,9 +25,13 @@ L.TileLayer.Ajax = L.TileLayer.extend({
             }
             var s = req.status;
             if ((s >= 200 && s < 300) || s == 304) {
-                layer.fire('tileresponse', {tile: tile, request: req});
-                tile.datum = JSON.parse(req.responseText);
-                layer._addTileData(tile);
+                // check if request is about to be aborted, avoid rare error when aborted while parsing
+                if (tile._request) {
+                    tile._request = null;
+                    layer.fire('tileresponse', {tile: tile, request: req});
+                    tile.datum = JSON.parse(req.responseText);
+                    layer._addTileData(tile);
+                }
             } else {
                 layer.fire('tileerror', {tile: tile});
                 layer._tileLoaded();
@@ -32,18 +43,20 @@ L.TileLayer.Ajax = L.TileLayer.extend({
         this._adjustTilePoint(tilePoint);
         var layer = this;
         var req = new XMLHttpRequest();
-        this._requests.push(req);
+        tile._request = req;
         req.onreadystatechange = this._xhrHandler(req, layer, tile);
         this.fire('tilerequest', {tile: tile, request: req});
         req.open('GET', this.getTileUrl(tilePoint), true);
         req.send();
     },
-    _reset: function() {
-        for (var i in this._requests) {
-            this._requests[i].abort();
+    _unloadTile: function(evt) {
+        var tile = evt.tile,
+            req = tile._request;
+        if (req) {
+            tile._request = null;
+            req.abort();
+            this.fire('tilerequestabort', {tile: tile, request: req});
         }
-        this._requests = [];
-        L.TileLayer.prototype._reset.apply(this, arguments);
     },
     _update: function() {
         //console.log('_update');
@@ -78,7 +91,6 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         L.TileLayer.Ajax.prototype.onAdd.call(this, map);
 
         map.on('viewreset', this._updateZoom, this);
-        this.on('tileunload', this._unloadTile);
 
         // root vector layer, contains tile vector layers as children 
         this.vectorLayer = this._createVectorLayer(); 
@@ -100,7 +112,6 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
 
         L.TileLayer.Ajax.prototype.onRemove.call(this, map);
 
-        this.off('tileunload', this._unloadTile);
         map.off('viewreset', this._updateZoom, this);
         map.off('layeradd', this._removeViewresetForPaths, this);
 
@@ -158,6 +169,8 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         }
     },
     _unloadTile: function(evt) {
+        L.TileLayer.Ajax.prototype._unloadTile.apply(this, arguments);
+
         var tileLayer = evt.tile.layer;
         this._deleteFromAddQueue(evt.tile);
         if (tileLayer) {

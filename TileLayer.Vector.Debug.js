@@ -5,6 +5,7 @@ L.TileLayer.Vector.Debug = L.TileLayer.Vector.extend({
     onAdd: function (map) {
         this.on('tilerequest', this._onTileRequest, this);
         this.on('tileresponse', this._onTileResponse, this);
+        this.on('tilerequestabort', this._onTileRequestAbort, this);
         this.on('tileload', this._onTileLoad, this);
         this.on('tileunload', this._onTileUnload, this);
         map.on('moveend', this._onMoveend, this);
@@ -15,25 +16,28 @@ L.TileLayer.Vector.Debug = L.TileLayer.Vector.extend({
         L.TileLayer.Vector.prototype.onRemove.apply(this, arguments);
         this.off('tilerequest', this._onTileRequest, this);
         this.off('tileresponse', this._onTileResponse, this);
+        this.off('tilerequestabort', this._onTileRequestAbort, this);
         this.off('tileload', this._onTileLoad, this);
         this.off('tileunload', this._onTileUnload, this);
         map.off('moveend', this._onMoveend, this);
     },
 
     _onTileRequest: function(evt) {
-        var tile = evt.tile,
-            layer = tile.layer;
-
+        var tile = evt.tile;
         this._requestCount++;
         console.log('request-start: ' + tile.key + ' - ' + this._requestCount);
     },
 
     _onTileResponse: function(evt) {
-        var tile = evt.tile,
-            layer = tile.layer;
-        
+        var tile = evt.tile;
         this._requestCount--;
         console.log('request-end  : ' + tile.key + ' - ' + this._requestCount);
+    },
+
+    _onTileRequestAbort: function(evt) {
+        var tile = evt.tile;
+        this._requestCount--;
+        console.log('request-abort: ' + tile.key + ' - ' + this._requestCount);
     },
 
     _onTileLoad: function(evt) {
