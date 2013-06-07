@@ -29,7 +29,7 @@ L.TileLayer.Ajax = L.TileLayer.extend({
                 if (tile._request) {
                     tile._request = null;
                     layer.fire('tileresponse', {tile: tile, request: req});
-                    tile.datum = JSON.parse(req.responseText);
+                    tile.datum = req.responseText;
                     layer._addTileData(tile);
                 }
             } else {
@@ -67,6 +67,11 @@ L.TileLayer.Ajax = L.TileLayer.extend({
 });
 
 L.TileLayer.Vector = L.TileLayer.Ajax.extend({
+    statics: {
+        // number of web workers, not using web workers when falsy
+        NUM_WORKERS: 2
+    },
+    
     options: {
         // factory function to create the vector tile layers (defaults to L.GeoJSON)
         layerFactory: L.geoJson,
@@ -103,6 +108,8 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         // Simply removes viewreset listeners right after they have been added, assuming that 
         // we always remove layers on viewreset and therefore projectLatlngs is unnecessary. 
         map.on('layeradd', this._removeViewresetForPaths, this);
+        
+        this._workers = L.TileLayer.Vector.createWorkers();
     },
     onRemove: function (map) {
         // unload tiles (L.TileLayer only calls _reset in onAdd)
@@ -116,6 +123,11 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
 
         this.vectorLayer = null;
         this._map = null;
+
+        if (this._workers) {
+            // TODO do not close when other layers are still using the static instance
+            //this._workers.close();
+        }
     },
     _createVectorLayer: function() {
         return this.options.layerFactory(null, this.vectorOptions);
@@ -130,12 +142,30 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         return this._createVectorLayer();
     },
     _addTileData: function(tile) {
-        this._addQueue.add(tile);
+        if (this._workers){ 
+            tile._worker = this._workers.data(tile.datum).then(L.bind(function(parsed) {
+                if (tile._worker) {
+                    tile._worker = null;
+                    tile.parsed = parsed;
+                    tile.datum = null;
+                    this._addQueue.add(tile);
+                } else {
+                    // tile has been unloaded, don't continue with adding
+                    //console.log('worker aborted ' + tile.key);
+                }
+            }, this));
+        } else {
+            this._addQueue.add(tile);
+        }
     },
     _addTileDataInternal: function(tile) {
         try {
             var tileLayer = this._createTileLayer();
-            tileLayer.addData(tile.datum);
+            if (!tile.parsed) {
+                tile.parsed = L.TileLayer.Vector.parseData(tile.datum);
+                tile.datum = null;
+            }
+            tileLayer.addData(tile.parsed);
             tile.layer = tileLayer;
             this.vectorLayer.addLayer(tileLayer);
         } catch (e) {
@@ -147,8 +177,14 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
     _unloadTile: function(evt) {
         L.TileLayer.Ajax.prototype._unloadTile.apply(this, arguments);
 
-        var tileLayer = evt.tile.layer;
-        this._addQueue.remove(evt.tile)
+        var tile = evt.tile,
+            tileLayer = tile.layer;
+        this._addQueue.remove(tile);
+        if (tile._worker) {
+            // TODO abort worker, would need to recreate after close
+            //tile._worker.close();
+            tile._worker = null;
+        }
         if (tileLayer) {
             // L.LayerGroup.hasLayer > v0.5.1 only 
             if (this.vectorLayer._layers[L.stamp(tileLayer)]) {
@@ -197,5 +233,21 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
             }
         }
         return result;
+    }
+});
+
+L.extend(L.TileLayer.Vector, {
+    parseData: function(data) {
+        return JSON.parse(data);
+    },
+
+    createWorkers: function() {
+        if (L.TileLayer.Vector.NUM_WORKERS && typeof Worker === "function" && typeof communist === "function"
+                && !("workers" in L.TileLayer.Vector)) {
+            L.TileLayer.Vector.workers = communist({
+                data : L.TileLayer.Vector.parseData
+            }, L.TileLayer.Vector.NUM_WORKERS);
+        }
+        return L.TileLayer.Vector.workers;
     }
 });
