@@ -18,6 +18,7 @@
     <script src="TileLayer.GeoJSON.js"></script>
     <script src="TileLayer.Vector.Unclipped.js"></script>
     <script src="TileLayer.Vector.Debug.js"></script>
+    <script src="Leaflet.label-patch.js"></script>
 
     <style type="text/css">
     html, body, #map {
@@ -78,15 +79,6 @@
             layer.bindPopup(feature.id + '<br>' + feature.properties.name);
         }
     }
-
-    // patch Leaflet.label plugin to avoid null error on viewreset when label has
-    // already been removed (v0.5.1), also see comment in L.TileLayer.Vector.onAdd 
-    var orig = L.Label.prototype._updatePosition;
-    L.Label.prototype._updatePosition = function() {
-        if (this._map) {
-            orig.apply(this, arguments);
-        }
-    };
 
     // filters out invalid (empty) geometries in Polymaps county dataset
     // to avoid exceptions in L.GeoJSON
