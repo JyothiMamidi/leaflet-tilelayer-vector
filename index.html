@@ -18,6 +18,8 @@
     <script src="TileLayer.GeoJSON.js"></script>
     <script src="TileLayer.Vector.Unclipped.js"></script>
     <script src="TileLayer.Vector.Debug.js"></script>
+    <script src="TileLayer.Div.js"></script>
+    <script src="TileLayer.Progress.js"></script>
     <script src="Leaflet.label-patch.js"></script>
 
     <style type="text/css">
@@ -115,6 +117,8 @@
 
     // debug layer (full layer, not an overlay yet)
     var debug = new L.TileLayer.Vector.Debug(url, options, vectorOptions);
+    
+    var progress = new L.TileLayer.Progress(vector);
 
     var map = L.map('map', {
         center: new L.LatLng(38.617, -100.261),
@@ -128,7 +132,7 @@
         'Vector.Debug': debug
     };
     // add as base to switch with radio instead of checkbox
-    L.control.layers(overlayMaps, {}, {
+    L.control.layers(overlayMaps, {'Progress (Vector)': progress}, {
         collapsed: false
     }).addTo(map);
     </script>
