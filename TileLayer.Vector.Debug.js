@@ -44,9 +44,10 @@ L.TileLayer.Vector.Debug = L.TileLayer.Vector.extend({
         var tile = evt.tile,
             layer = tile.layer,
             tileSize = this.options.tileSize,
-            x = tile.key.split(':')[0],
-            y = tile.key.split(':')[1],
-            tilePoint = new L.Point(x, y),
+            kx = +tile.key.split(':')[0],
+            ky = +tile.key.split(':')[1],
+            tilePoint = new L.Point(kx, ky),
+            x, y, z, 
             nwPoint = tilePoint.multiplyBy(tileSize),
             sePoint = nwPoint.add(new L.Point(tileSize, tileSize)),
             nw = this._map.unproject(nwPoint),
@@ -57,6 +58,11 @@ L.TileLayer.Vector.Debug = L.TileLayer.Vector.extend({
             
         console.log('loaded       : ' + tile.key);
 
+        this._adjustTilePoint(tilePoint);
+        x = tilePoint.x;
+        y = tilePoint.y;
+        z = tilePoint.z;
+                
         lBounds = L.rectangle(latLngBounds, {
                 weight: 1,
                 //stroke: false,
@@ -79,7 +85,7 @@ L.TileLayer.Vector.Debug = L.TileLayer.Vector.extend({
         textEle.setAttribute('dy', '1.5em');
         textEle.setAttribute('style', 'fill: red; font-family: "Lucida Console", Monaco, monospace;');
 
-        text = layer._map.getZoom() + '/' + x + '/' + y + '  ' + '(' + tile.key + ')';
+        text = z + '/' + x + '/' + y + '  ' + '(zoom ' + layer._map.getZoom() + ', key ' + tile.key + ')';
         textNode = document.createTextNode(text);
         textEle.appendChild(textNode);
 
