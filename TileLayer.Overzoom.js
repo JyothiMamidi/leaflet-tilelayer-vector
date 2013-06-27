@@ -1,3 +1,4 @@
+// TODO does not work?
 L.TileLayer.mergeOptions({
     // List of available server zoom levels in ascending order. Empty means all  
     // client zooms are available (default). Allows to only request tiles at certain
@@ -34,7 +35,7 @@ L.TileLayer.include({
     // (should be restricted by setting minZoom to avoid loading too many tiles).
     _getServerZoom: function() {
         var zoom = this._zoom,
-            serverZooms = this.options.serverZooms,
+            serverZooms = this.options.serverZooms || [],
             result = zoom;
         // expects serverZooms to be sorted ascending
         for (var i = 0, len = serverZooms.length; i < len; i++) {
