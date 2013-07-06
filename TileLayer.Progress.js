@@ -32,7 +32,6 @@ L.TileLayer.Progress = L.TileLayer.Div.extend({
         if (this.options.tileSize != this.vectorLayer.options.tileSize) {
             this.options.tileSize = this.vectorLayer.options.tileSize;
             this.options.zoomOffset = this.vectorLayer.options.zoomOffset;
-            this._createTileProto();
         }
     },
 

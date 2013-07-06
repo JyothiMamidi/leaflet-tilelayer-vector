@@ -4,16 +4,11 @@ L.TileLayer.Div = L.TileLayer.extend({
         L.TileLayer.prototype.initialize.call(this, null, options);
     },
 
-    _createTileProto: function () {
-        this._proto = L.DomUtil.create('div', 'leaflet-tile leaflet-tile-loaded');
-
-        var tileSize = this.options.tileSize;
-        this._proto.style.width = tileSize + 'px';
-        this._proto.style.height = tileSize + 'px';
-    },
-
     _createTile: function () {
-        var tile = this._proto.cloneNode(false);
+        var tile = L.DomUtil.create('div', 'leaflet-tile leaflet-tile-loaded');
+        var tileSize = this.options.tileSize;
+        tile.style.width = tileSize + 'px';
+        tile.style.height = tileSize + 'px';
         tile.onselectstart = tile.onmousemove = L.Util.falseFn;
         return tile;        
     },
