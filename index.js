@@ -7,4 +7,5 @@ require('./TileLayer.Vector.Unclipped.js');
 require('./TileLayer.Ajax.Binary.js');
 require('./TileLayer.Div.js');
 require('./TileLayer.Progress.js');
+require('./TileLayer.Overzoom.js');
 require('./Leaflet.label-patch.js');
