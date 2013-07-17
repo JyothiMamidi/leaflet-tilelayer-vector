@@ -67,18 +67,16 @@ L.TileLayer.Ajax = L.TileLayer.extend({
 });
 
 L.TileLayer.Vector = L.TileLayer.Ajax.extend({
-    statics: {
-        // number of web workers, not using web workers when falsy
-        NUM_WORKERS: 2
-    },
-    
     options: {
         // factory function to create the vector tile layers (defaults to L.GeoJSON)
-        layerFactory: L.geoJson
+        layerFactory: L.geoJson,
+        // factory function to create a web worker for parsing/preparing tile data
+        workerFactory: L.communistWorker
     },
     initialize: function (url, options, vectorOptions) {
         L.TileLayer.Ajax.prototype.initialize.call(this, url, options);
         this.vectorOptions = vectorOptions || {};
+        this._worker = this.options.workerFactory(L.TileLayer.Vector.parseData);
         this._addQueue = new L.TileQueue(L.bind(this._addTileDataInternal, this));
     },
     onAdd: function (map) {
@@ -103,7 +101,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         // we always remove layers on viewreset and therefore projectLatlngs is unnecessary. 
         map.on('layeradd', this._removeViewresetForPaths, this);
         
-        this._workers = L.TileLayer.Vector.createWorkers();
+        this._worker.onAdd(map);
     },
     onRemove: function (map) {
         // unload tiles (L.TileLayer only calls _reset in onAdd)
@@ -115,13 +113,10 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         map.off('viewreset', this._updateZoom, this);
         map.off('layeradd', this._removeViewresetForPaths, this);
 
+        this._worker.onRemove(map);
+
         this.vectorLayer = null;
         this._map = null;
-
-        if (this._workers) {
-            // TODO do not close when other layers are still using the static instance
-            //this._workers.close();
-        }
     },
     _createVectorLayer: function() {
         return this.options.layerFactory(null, this.vectorOptions);
@@ -136,21 +131,9 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         return this._createVectorLayer();
     },
     _addTileData: function(tile) {
-        if (this._workers){ 
-            tile._worker = this._workers.data(tile.datum).then(L.bind(function(parsed) {
-                if (tile._worker) {
-                    tile._worker = null;
-                    tile.parsed = parsed;
-                    tile.datum = null;
-                    this._addQueue.add(tile);
-                } else {
-                    // tile has been unloaded, don't continue with adding
-                    //console.log('worker aborted ' + tile.key);
-                }
-            }, this));
-        } else {
+        this._worker.process(tile, L.bind(function(tile) {
             this._addQueue.add(tile);
-        }
+        },this));
     },
     _addTileDataInternal: function(tile) {
         try {
@@ -174,11 +157,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         var tile = evt.tile,
             tileLayer = tile.layer;
         this._addQueue.remove(tile);
-        if (tile._worker) {
-            // TODO abort worker, would need to recreate after close
-            //tile._worker.close();
-            tile._worker = null;
-        }
+        this._worker.abort(tile);
         if (tileLayer) {
             // L.LayerGroup.hasLayer > v0.5.1 only 
             if (this.vectorLayer._layers[L.stamp(tileLayer)]) {
@@ -195,15 +174,5 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
 L.extend(L.TileLayer.Vector, {
     parseData: function(data) {
         return JSON.parse(data);
-    },
-
-    createWorkers: function() {
-        if (L.TileLayer.Vector.NUM_WORKERS && typeof Worker === "function" && typeof communist === "function"
-                && !("workers" in L.TileLayer.Vector)) {
-            L.TileLayer.Vector.workers = communist({
-                data : L.TileLayer.Vector.parseData
-            }, L.TileLayer.Vector.NUM_WORKERS);
-        }
-        return L.TileLayer.Vector.workers;
     }
 });
