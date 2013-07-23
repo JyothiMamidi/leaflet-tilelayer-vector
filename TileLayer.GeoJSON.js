@@ -71,7 +71,8 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         // factory function to create the vector tile layers (defaults to L.GeoJSON)
         layerFactory: L.geoJson,
         // factory function to create a web worker for parsing/preparing tile data
-        workerFactory: L.communistWorker
+        //workerFactory: L.communistWorker
+        workerFactory: L.noWorker
     },
     initialize: function (url, options, vectorOptions) {
         L.TileLayer.Ajax.prototype.initialize.call(this, url, options);
@@ -168,6 +169,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
     _reset: function() {
         L.TileLayer.Ajax.prototype._reset.apply(this, arguments);
         this._addQueue.clear();
+        this._worker.clear();
     }
 });
 

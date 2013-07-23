@@ -1,4 +1,4 @@
-L.CommunistWorker = L.Class.extend({
+L.CommunistWorker = L.AbstractWorker.extend({
 
     statics: {
         // number of web workers, not using web workers when falsy
