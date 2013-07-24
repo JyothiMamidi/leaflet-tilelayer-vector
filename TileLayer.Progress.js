@@ -2,7 +2,8 @@
  * Loading progress info layer for L.TileLayer.Vector
  */
 L.TileLayer.Progress = L.TileLayer.Div.extend({
-
+    adding: false,
+    
     initialize: function (vectorLayer) {
         L.TileLayer.Div.prototype.initialize.call(this, vectorLayer.options);
 
@@ -10,10 +11,12 @@ L.TileLayer.Progress = L.TileLayer.Div.extend({
     },
 
     onAdd: function (map) {
+        this.adding = true;
         map.on('viewreset', this._updateZoom, this);
         this.vectorLayer.on('tileload', this._onTileLoad, this);
         this.vectorLayer.on('tileerror', this._onTileLoad, this);
         L.TileLayer.Div.prototype.onAdd.apply(this, arguments);
+        this.adding = false;
     },
 
     onRemove: function (map) {
@@ -26,6 +29,10 @@ L.TileLayer.Progress = L.TileLayer.Div.extend({
     drawTile: function (tile, tilePoint) {
         tile.style.backgroundColor = 'rgba(128, 128, 128, 0.3)';
         tile.style.border = '1px solid rgba(128, 128, 128, 0.8)';
+        if (this.adding) {
+            // hide tiles initially when adding layer
+            tile.classList.remove('leaflet-tile-loaded');
+        }
     },
 
     _updateZoom: function() {
