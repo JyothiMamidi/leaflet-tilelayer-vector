@@ -10,8 +10,9 @@ L.TileLayer.Ajax = L.TileLayer.extend({
     },
     _addTile: function(tilePoint, container) {
         var key = tilePoint.x + ':' + tilePoint.y;
-        var tile = { key: key, datum: null };
+        var tile = { key: key, datum: null, loading: true };
         this._tiles[key] = tile;
+        this.fire('tileloading', {tile: tile});
         this._loadTile(tile, tilePoint);
     },
     _addTileData: function(tile) {
@@ -149,6 +150,8 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         } catch (e) {
             console.error(e.toString());
         }
+
+        tile.loading = false;
         this.fire('tileload', {tile: tile});
         this._tileLoaded();
     },
