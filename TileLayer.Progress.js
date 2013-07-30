@@ -20,6 +20,7 @@ L.TileLayer.Progress = L.TileLayer.Div.extend({
         this.vectorLayer.on('tileloading', this._onTileLoading, this);
         this.vectorLayer.on('tileload', this._onTileLoad, this);
         this.vectorLayer.on('tileerror', this._onTileError, this);
+        this.vectorLayer.on('tileunload', this._onTileLoad, this);
         L.TileLayer.Div.prototype.onAdd.apply(this, arguments);
         this._adding = false;
     },
@@ -30,6 +31,7 @@ L.TileLayer.Progress = L.TileLayer.Div.extend({
         this.vectorLayer.off('tileloading', this._onTileLoading, this);
         this.vectorLayer.off('tileload', this._onTileLoad, this);
         this.vectorLayer.off('tileerror', this._onTileError, this);
+        this.vectorLayer.off('tileunload', this._onTileLoad, this);
         map.off('viewreset', this._updateZoom, this);
     },
 
