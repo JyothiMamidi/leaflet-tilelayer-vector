@@ -18,8 +18,10 @@ L.TileLayer.Ajax.include({
                     layer._addTileData(tile);
                 }
             } else {
-                layer.fire('tileerror', {tile: tile});
-                layer._tileLoaded();
+                tile.loading = false;
+                tile._request = null;
+                layer.fire('tileerror', {tile: tile, request: req});
+                layer._tileLoaded();                
             }
         }
     },

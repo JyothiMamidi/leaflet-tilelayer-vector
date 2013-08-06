@@ -34,7 +34,9 @@ L.TileLayer.Ajax = L.TileLayer.extend({
                     layer._addTileData(tile);
                 }
             } else {
-                layer.fire('tileerror', {tile: tile});
+                tile.loading = false;
+                tile._request = null;
+                layer.fire('tileerror', {tile: tile, request: req});
                 layer._tileLoaded();
             }
         }
@@ -160,8 +162,12 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
 
         var tile = evt.tile,
             tileLayer = tile.layer;
-        this._addQueue.remove(tile);
-        this._worker.abort(tile);
+        if (tile.loading) {
+            this._addQueue.remove(tile);
+            this._worker.abort(tile);
+            this.fire('tileabort', {tile: tile});
+            this._tileLoaded();
+        }
         if (tileLayer) {
             // L.LayerGroup.hasLayer > v0.5.1 only 
             if (this.vectorLayer._layers[L.stamp(tileLayer)]) {
