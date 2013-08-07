@@ -22,6 +22,7 @@ L.TileLayer.Ajax = L.TileLayer.extend({
         this.off('tileunload', this._unloadTile);
     },
     _addTile: function(tilePoint, container) {
+        var cached = null;
         var key = tilePoint.x + ':' + tilePoint.y;
         var urlZoom = this._getZoomForUrl();
         var tile = cached = this._tileCache.get(key, urlZoom);
@@ -206,7 +207,9 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
             }
         }
 
-        this._tileCache.put(tile);
+        if (tile.parsed) {
+            this._tileCache.put(tile);
+        }
     },
     _reset: function() {
         L.TileLayer.Ajax.prototype._reset.apply(this, arguments);
