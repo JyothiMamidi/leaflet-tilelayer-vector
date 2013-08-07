@@ -1,5 +1,18 @@
 // Load data tiles using the JQuery ajax function
 L.TileLayer.Ajax = L.TileLayer.extend({
+    options: {
+        // use L.tileCacheNone to turn caching off
+        tileCacheFactory: L.tileCache
+    },
+
+    _tileCache: null,
+
+    initialize: function (url, options) {
+        L.TileLayer.prototype.initialize.call(this, url, options);
+        
+        this._tileCache = this.options.tileCacheFactory();
+    },
+
     onAdd: function (map) {
         L.TileLayer.prototype.onAdd.call(this, map);
         this.on('tileunload', this._unloadTile);
@@ -10,10 +23,20 @@ L.TileLayer.Ajax = L.TileLayer.extend({
     },
     _addTile: function(tilePoint, container) {
         var key = tilePoint.x + ':' + tilePoint.y;
-        var tile = { key: key, datum: null, loading: true };
+        var urlZoom = this._getZoomForUrl();
+        var tile = cached = this._tileCache.get(key, urlZoom);
+        if (!tile) {
+            tile = { key: key, urlZoom: urlZoom, datum: null, loading: true };
+        }
+
         this._tiles[key] = tile;
         this.fire('tileloading', {tile: tile});
-        this._loadTile(tile, tilePoint);
+
+        if (cached) {
+            this._addTileData(tile);
+        } else {
+            this._loadTile(tile, tilePoint);
+        }
     },
     _addTileData: function(tile) {
         // override in subclass
@@ -106,6 +129,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         map.on('layeradd', this._removeViewresetForPaths, this);
         
         this._worker.onAdd(map);
+        this._tileCache.onAdd(map);
     },
     onRemove: function (map) {
         // unload tiles (L.TileLayer only calls _reset in onAdd)
@@ -118,6 +142,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         map.off('layeradd', this._removeViewresetForPaths, this);
 
         this._worker.onRemove(map);
+        this._tileCache.onRemove(map);
 
         this.vectorLayer = null;
         this._map = null;
@@ -135,14 +160,20 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         return this._createVectorLayer();
     },
     _addTileData: function(tile) {
-        this._worker.process(tile, L.bind(function(tile) {
+        if (!tile.parsed) {
+            this._worker.process(tile, L.bind(function(tile) {
+                this._addQueue.add(tile);
+            },this));
+        } else {
+            // from cache
             this._addQueue.add(tile);
-        },this));
+        }
     },
     _addTileDataInternal: function(tile) {
         try {
             var tileLayer = this._createTileLayer();
             if (!tile.parsed) {
+                // when no worker for parsing
                 tile.parsed = L.TileLayer.Vector.parseData(tile.datum);
                 tile.datum = null;
             }
@@ -174,6 +205,8 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
                 this.vectorLayer.removeLayer(tileLayer);
             }
         }
+
+        this._tileCache.put(tile);
     },
     _reset: function() {
         L.TileLayer.Ajax.prototype._reset.apply(this, arguments);
