@@ -171,19 +171,15 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         }
     },
     _addTileDataInternal: function(tile) {
-        try {
-            var tileLayer = this._createTileLayer();
-            if (!tile.parsed) {
-                // when no worker for parsing
-                tile.parsed = L.TileLayer.Vector.parseData(tile.datum);
-                tile.datum = null;
-            }
-            tileLayer.addData(tile.parsed);
-            tile.layer = tileLayer;
-            this.vectorLayer.addLayer(tileLayer);
-        } catch (e) {
-            console.error(e.toString());
+        var tileLayer = this._createTileLayer();
+        if (!tile.parsed) {
+            // when no worker for parsing
+            tile.parsed = L.TileLayer.Vector.parseData(tile.datum);
+            tile.datum = null;
         }
+        tileLayer.addData(tile.parsed);
+        tile.layer = tileLayer;
+        this.vectorLayer.addLayer(tileLayer);
 
         tile.loading = false;
         this.fire('tileload', {tile: tile});
