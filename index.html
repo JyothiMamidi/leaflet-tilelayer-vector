@@ -4,16 +4,19 @@
     <title>Leaflet vector tile layer example</title>
     <meta charset="utf-8" />
 
-    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.6/leaflet.css" />
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.6.4/leaflet.css" />
     <!--[if lte IE 8]>
-        <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.6/leaflet.ie.css" />
+        <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.6.4/leaflet.ie.css" />
     <![endif]-->
     <link rel="stylesheet" href="http://leaflet.github.io/Leaflet.label/leaflet.label.css" />
-    <script src="http://cdn.leafletjs.com/leaflet-0.6/leaflet.js"></script>
+    <script src="http://cdn.leafletjs.com/leaflet-0.6.4/leaflet.js"></script>
     <script src="http://leaflet.github.io/Leaflet.label/leaflet.label.js"></script>
     <script src="lib/communist.min.js"></script>
 
+    <script src="TileCache.js"></script>
     <script src="TileQueue.js"></script>
+    <script src="AbstractWorker.js"></script>
+    <script src="CommunistWorker.js"></script>
     <script src="TileLayer.GeoJSON.js"></script>
     <script src="TileLayer.Vector.Unclipped.js"></script>
     <script src="TileLayer.Vector.Debug.js"></script>
@@ -123,7 +126,7 @@
     var map = L.map('map', {
         center: new L.LatLng(38.617, -100.261),
         zoom: 5,
-        layers: [background, vector] 
+        layers: [background, vector, progress] 
     });
 
     var overlayMaps = {

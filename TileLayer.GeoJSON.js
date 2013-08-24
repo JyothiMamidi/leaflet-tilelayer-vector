@@ -1,5 +1,18 @@
 // Load data tiles using the JQuery ajax function
 L.TileLayer.Ajax = L.TileLayer.extend({
+    options: {
+        // use L.tileCacheNone to turn caching off
+        tileCacheFactory: L.tileCache
+    },
+
+    _tileCache: null,
+
+    initialize: function (url, options) {
+        L.TileLayer.prototype.initialize.call(this, url, options);
+        
+        this._tileCache = this.options.tileCacheFactory();
+    },
+
     onAdd: function (map) {
         L.TileLayer.prototype.onAdd.call(this, map);
         this.on('tileunload', this._unloadTile);
@@ -9,10 +22,22 @@ L.TileLayer.Ajax = L.TileLayer.extend({
         this.off('tileunload', this._unloadTile);
     },
     _addTile: function(tilePoint, container) {
+        var cached = null;
         var key = tilePoint.x + ':' + tilePoint.y;
-        var tile = { key: key, datum: null };
+        var urlZoom = this._getZoomForUrl();
+        var tile = cached = this._tileCache.get(key, urlZoom);
+        if (!tile) {
+            tile = { key: key, urlZoom: urlZoom, datum: null, loading: true };
+        }
+
         this._tiles[key] = tile;
-        this._loadTile(tile, tilePoint);
+        this.fire('tileloading', {tile: tile});
+
+        if (cached) {
+            this._addTileData(tile);
+        } else {
+            this._loadTile(tile, tilePoint);
+        }
     },
     _addTileData: function(tile) {
         // override in subclass
@@ -33,7 +58,9 @@ L.TileLayer.Ajax = L.TileLayer.extend({
                     layer._addTileData(tile);
                 }
             } else {
-                layer.fire('tileerror', {tile: tile});
+                tile.loading = false;
+                tile._request = null;
+                layer.fire('tileerror', {tile: tile, request: req});
                 layer._tileLoaded();
             }
         }
@@ -67,18 +94,17 @@ L.TileLayer.Ajax = L.TileLayer.extend({
 });
 
 L.TileLayer.Vector = L.TileLayer.Ajax.extend({
-    statics: {
-        // number of web workers, not using web workers when falsy
-        NUM_WORKERS: 2
-    },
-    
     options: {
         // factory function to create the vector tile layers (defaults to L.GeoJSON)
-        layerFactory: L.geoJson
+        layerFactory: L.geoJson,
+        // factory function to create a web worker for parsing/preparing tile data
+        //workerFactory: L.communistWorker
+        workerFactory: L.noWorker
     },
     initialize: function (url, options, vectorOptions) {
         L.TileLayer.Ajax.prototype.initialize.call(this, url, options);
         this.vectorOptions = vectorOptions || {};
+        this._worker = this.options.workerFactory(L.TileLayer.Vector.parseData);
         this._addQueue = new L.TileQueue(L.bind(this._addTileDataInternal, this));
     },
     onAdd: function (map) {
@@ -103,7 +129,8 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         // we always remove layers on viewreset and therefore projectLatlngs is unnecessary. 
         map.on('layeradd', this._removeViewresetForPaths, this);
         
-        this._workers = L.TileLayer.Vector.createWorkers();
+        this._worker.onAdd(map);
+        this._tileCache.onAdd(map);
     },
     onRemove: function (map) {
         // unload tiles (L.TileLayer only calls _reset in onAdd)
@@ -115,13 +142,11 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         map.off('viewreset', this._updateZoom, this);
         map.off('layeradd', this._removeViewresetForPaths, this);
 
+        this._worker.onRemove(map);
+        this._tileCache.onRemove(map);
+
         this.vectorLayer = null;
         this._map = null;
-
-        if (this._workers) {
-            // TODO do not close when other layers are still using the static instance
-            //this._workers.close();
-        }
     },
     _createVectorLayer: function() {
         return this.options.layerFactory(null, this.vectorOptions);
@@ -136,35 +161,27 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         return this._createVectorLayer();
     },
     _addTileData: function(tile) {
-        if (this._workers){ 
-            tile._worker = this._workers.data(tile.datum).then(L.bind(function(parsed) {
-                if (tile._worker) {
-                    tile._worker = null;
-                    tile.parsed = parsed;
-                    tile.datum = null;
-                    this._addQueue.add(tile);
-                } else {
-                    // tile has been unloaded, don't continue with adding
-                    //console.log('worker aborted ' + tile.key);
-                }
-            }, this));
+        if (!tile.parsed) {
+            this._worker.process(tile, L.bind(function(tile) {
+                this._addQueue.add(tile);
+            },this));
         } else {
+            // from cache
             this._addQueue.add(tile);
         }
     },
     _addTileDataInternal: function(tile) {
-        try {
-            var tileLayer = this._createTileLayer();
-            if (!tile.parsed) {
-                tile.parsed = L.TileLayer.Vector.parseData(tile.datum);
-                tile.datum = null;
-            }
-            tileLayer.addData(tile.parsed);
-            tile.layer = tileLayer;
-            this.vectorLayer.addLayer(tileLayer);
-        } catch (e) {
-            console.error(e.toString());
+        var tileLayer = this._createTileLayer();
+        if (!tile.parsed) {
+            // when no worker for parsing
+            tile.parsed = L.TileLayer.Vector.parseData(tile.datum);
+            tile.datum = null;
         }
+        tileLayer.addData(tile.parsed);
+        tile.layer = tileLayer;
+        this.vectorLayer.addLayer(tileLayer);
+
+        tile.loading = false;
         this.fire('tileload', {tile: tile});
         this._tileLoaded();
     },
@@ -173,11 +190,11 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
 
         var tile = evt.tile,
             tileLayer = tile.layer;
-        this._addQueue.remove(tile);
-        if (tile._worker) {
-            // TODO abort worker, would need to recreate after close
-            //tile._worker.close();
-            tile._worker = null;
+        if (tile.loading) {
+            this._addQueue.remove(tile);
+            this._worker.abort(tile);
+            this.fire('tileabort', {tile: tile});
+            this._tileLoaded();
         }
         if (tileLayer) {
             // L.LayerGroup.hasLayer > v0.5.1 only 
@@ -185,25 +202,20 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
                 this.vectorLayer.removeLayer(tileLayer);
             }
         }
+
+        if (tile.parsed) {
+            this._tileCache.put(tile);
+        }
     },
     _reset: function() {
         L.TileLayer.Ajax.prototype._reset.apply(this, arguments);
         this._addQueue.clear();
+        this._worker.clear();
     }
 });
 
 L.extend(L.TileLayer.Vector, {
     parseData: function(data) {
         return JSON.parse(data);
-    },
-
-    createWorkers: function() {
-        if (L.TileLayer.Vector.NUM_WORKERS && typeof Worker === "function" && typeof communist === "function"
-                && !("workers" in L.TileLayer.Vector)) {
-            L.TileLayer.Vector.workers = communist({
-                data : L.TileLayer.Vector.parseData
-            }, L.TileLayer.Vector.NUM_WORKERS);
-        }
-        return L.TileLayer.Vector.workers;
     }
 });
