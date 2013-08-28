@@ -28,6 +28,8 @@ L.TileLayer.Ajax = L.TileLayer.extend({
         var tile = cached = this._tileCache.get(key, urlZoom);
         if (!tile) {
             tile = { key: key, urlZoom: urlZoom, datum: null, loading: true };
+        } else {
+            tile.loading = true;
         }
 
         this._tiles[key] = tile;
@@ -192,7 +194,10 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
             tileLayer = tile.layer;
         if (tile.loading) {
             this._addQueue.remove(tile);
-            this._worker.abort(tile);
+            // not from cache or not loaded and parsed yet
+            if (!tile.parsed) {
+                this._worker.abort(tile);
+            }
             this.fire('tileabort', {tile: tile});
             this._tileLoaded();
         }
