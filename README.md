@@ -1,3 +1,22 @@
+# (Development) Fork
+
+-work in progress-
+
+additions to leaflet-tilelayer-geojson:
+
+* based on Leaflet Path vector classes instead of GeoJSON
+* remove tiles/vectors outside viewport
+* deduplication for unclipped tiles, remove common features only when no more references
+* overzooming (reuse tiles for multiple zoom levels)
+* loading/progress tiles
+* Web Worker support
+
+Todo
+* cleanup, refactoring
+** configurable modules for tile loading (streams?): e.g. request > worker > queue > add
+* debug layer
+* discuss if and what to merge back
+
 # Leaflet GeoJSON Tile Layer
 Renders GeoJSON tiles on an L.GeoJSON layer
 
