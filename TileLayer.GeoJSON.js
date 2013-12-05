@@ -112,11 +112,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
     onAdd: function (map) {
         this._map = map;
         
-        this._updateZoom();
-
         L.TileLayer.Ajax.prototype.onAdd.call(this, map);
-
-        map.on('viewreset', this._updateZoom, this);
 
         // root vector layer, contains tile vector layers as children 
         this.vectorLayer = this._createVectorLayer(); 
@@ -141,7 +137,6 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
 
         L.TileLayer.Ajax.prototype.onRemove.call(this, map);
 
-        map.off('viewreset', this._updateZoom, this);
         map.off('layeradd', this._removeViewresetForPaths, this);
 
         this._worker.onRemove(map);

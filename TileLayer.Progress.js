@@ -15,7 +15,6 @@ L.TileLayer.Progress = L.TileLayer.Div.extend({
 
     onAdd: function (map) {
         this._adding = true;
-        map.on('viewreset', this._updateZoom, this);
         map.on('layerremove', this._onVecRemove, this);
         this.vectorLayer.on('tileloading', this._onTileLoading, this);
         this.vectorLayer.on('tileload', this._onTileLoad, this);
@@ -32,7 +31,6 @@ L.TileLayer.Progress = L.TileLayer.Div.extend({
         this.vectorLayer.off('tileload', this._onTileLoad, this);
         this.vectorLayer.off('tileerror', this._onTileError, this);
         this.vectorLayer.off('tileunload', this._onTileLoad, this);
-        map.off('viewreset', this._updateZoom, this);
     },
 
     drawTile: function (tile, tilePoint) {
@@ -56,13 +54,6 @@ L.TileLayer.Progress = L.TileLayer.Div.extend({
             if (loading) {
                 this._show(tile);
             }
-        }
-    },
-
-    _updateZoom: function() {
-        if (this.options.tileSize != this.vectorLayer.options.tileSize) {
-            this.options.tileSize = this.vectorLayer.options.tileSize;
-            this.options.zoomOffset = this.vectorLayer.options.zoomOffset;
         }
     },
 
