@@ -86,12 +86,6 @@ L.TileLayer.Ajax = L.TileLayer.extend({
             req.abort();
             this.fire('tilerequestabort', {tile: tile, request: req});
         }
-    },
-    _update: function() {
-        //console.log('_update');
-        if (this._map._panTransition && this._map._panTransition._inProgress) { return; }
-        if (this._tilesToLoad < 0) this._tilesToLoad = 0;
-        L.TileLayer.prototype._update.apply(this, arguments);
     }
 });
 
