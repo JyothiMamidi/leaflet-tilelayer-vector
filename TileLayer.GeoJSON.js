@@ -173,11 +173,8 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
             this.fire('tileabort', {tile: tile});
             this._tileLoaded();
         }
-        if (tileLayer) {
-            // L.LayerGroup.hasLayer > v0.5.1 only 
-            if (this.vectorLayer._layers[L.stamp(tileLayer)]) {
-                this.vectorLayer.removeLayer(tileLayer);
-            }
+        if (tileLayer && this.vectorLayer.hasLayer(tileLayer)) {
+            this.vectorLayer.removeLayer(tileLayer);
         }
 
         if (tile.parsed) {
