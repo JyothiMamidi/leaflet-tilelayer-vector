@@ -112,15 +112,6 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         this.vectorLayer = this._createVectorLayer(); 
         map.addLayer(this.vectorLayer);
 
-        // workaround for v0.5.1:
-        // Error in projectLatlngs because L.Path._map is null, when layer has been removed 
-        // in the same viewreset event (tileunload) and listeners are not removed yet.
-        // Not needed for current master (> v0.5.1), because listeners are removed immediately.
-        // 
-        // Simply removes viewreset listeners right after they have been added, assuming that 
-        // we always remove layers on viewreset and therefore projectLatlngs is unnecessary. 
-        map.on('layeradd', this._removeViewresetForPaths, this);
-        
         this._worker.onAdd(map);
         this._tileCache.onAdd(map);
     },
@@ -131,8 +122,6 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
 
         L.TileLayer.Ajax.prototype.onRemove.call(this, map);
 
-        map.off('layeradd', this._removeViewresetForPaths, this);
-
         this._worker.onRemove(map);
         this._tileCache.onRemove(map);
 
@@ -141,12 +130,6 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
     },
     _createVectorLayer: function() {
         return this.options.layerFactory(null, this.vectorOptions);
-    },
-    _removeViewresetForPaths: function(evt) {
-        var layer = evt.layer;
-        if (layer.projectLatlngs && this._map) {
-            this._map.off('viewreset', layer.projectLatlngs, layer);
-        }
     },
     _createTileLayer: function() {
         return this._createVectorLayer();
