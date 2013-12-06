@@ -16,7 +16,7 @@ L.TileLayer.Progress = L.TileLayer.Div.extend({
     onAdd: function (map) {
         this._adding = true;
         map.on('layerremove', this._onVecRemove, this);
-        this.vectorLayer.on('tileloading', this._onTileLoading, this);
+        this.vectorLayer.on('tileloadstart', this._onTileLoading, this);
         this.vectorLayer.on('tileload', this._onTileLoad, this);
         this.vectorLayer.on('tileerror', this._onTileError, this);
         this.vectorLayer.on('tileunload', this._onTileLoad, this);
@@ -27,7 +27,7 @@ L.TileLayer.Progress = L.TileLayer.Div.extend({
     onRemove: function (map) {
         L.TileLayer.Div.prototype.onRemove.apply(this, arguments);
         this._loadingTiles = {};
-        this.vectorLayer.off('tileloading', this._onTileLoading, this);
+        this.vectorLayer.off('tileloadstart', this._onTileLoading, this);
         this.vectorLayer.off('tileload', this._onTileLoad, this);
         this.vectorLayer.off('tileerror', this._onTileError, this);
         this.vectorLayer.off('tileunload', this._onTileLoad, this);
@@ -46,7 +46,7 @@ L.TileLayer.Progress = L.TileLayer.Div.extend({
             this._hide(tile);
         }
 
-        // check for already loading tiles, because initial tileloading
+        // check for already loading tiles, because initial tileloadstart
         // events might have been missed when layer is added
         if (this._adding) {
             vecTile = this.vectorLayer._tiles[key];

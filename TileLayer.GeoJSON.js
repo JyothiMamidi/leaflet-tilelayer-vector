@@ -33,7 +33,7 @@ L.TileLayer.Ajax = L.TileLayer.extend({
         }
 
         this._tiles[key] = tile;
-        this.fire('tileloading', {tile: tile});
+        this.fire('tileloadstart', {tile: tile});
 
         if (cached) {
             this._addTileData(tile);
