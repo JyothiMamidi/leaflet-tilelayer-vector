@@ -17,10 +17,12 @@ L.TileLayer.Ajax = L.TileLayer.extend({
         L.TileLayer.prototype.onAdd.call(this, map);
         this.on('tileunload', this._unloadTile);
     },
+
     onRemove: function (map) {
         L.TileLayer.prototype.onRemove.call(this, map);
         this.off('tileunload', this._unloadTile);
     },
+
     _addTile: function(tilePoint, container) {
         var cached = null;
         var key = tilePoint.x + ':' + tilePoint.y;
@@ -41,9 +43,11 @@ L.TileLayer.Ajax = L.TileLayer.extend({
             this._loadTile(tile, tilePoint);
         }
     },
+
     _addTileData: function(tile) {
         // override in subclass
     },
+
     // XMLHttpRequest handler; closure over the XHR object, the layer, and the tile
     _xhrHandler: function (req, layer, tile) {
         return function() {
@@ -67,6 +71,7 @@ L.TileLayer.Ajax = L.TileLayer.extend({
             }
         }
     },
+
     // Load the requested tile via AJAX
     _loadTile: function (tile, tilePoint) {
         this._adjustTilePoint(tilePoint);
@@ -78,6 +83,7 @@ L.TileLayer.Ajax = L.TileLayer.extend({
         req.open('GET', this.getTileUrl(tilePoint), true);
         req.send();
     },
+
     _unloadTile: function(evt) {
         var tile = evt.tile,
             req = tile._request;
@@ -89,6 +95,7 @@ L.TileLayer.Ajax = L.TileLayer.extend({
     }
 });
 
+
 L.TileLayer.Vector = L.TileLayer.Ajax.extend({
     options: {
         // factory function to create the vector tile layers (defaults to L.GeoJSON)
@@ -97,12 +104,14 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         //workerFactory: L.communistWorker
         workerFactory: L.noWorker
     },
+
     initialize: function (url, options, vectorOptions) {
         L.TileLayer.Ajax.prototype.initialize.call(this, url, options);
         this.vectorOptions = vectorOptions || {};
         this._worker = this.options.workerFactory(L.TileLayer.Vector.parseData);
         this._addQueue = new L.TileQueue(L.bind(this._addTileDataInternal, this));
     },
+
     onAdd: function (map) {
         this._map = map;
         
@@ -115,6 +124,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         this._worker.onAdd(map);
         this._tileCache.onAdd(map);
     },
+
     onRemove: function (map) {
         // unload tiles (L.TileLayer only calls _reset in onAdd)
         this._reset();
@@ -128,12 +138,15 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         this.vectorLayer = null;
         this._map = null;
     },
+
     _createVectorLayer: function() {
         return this.options.layerFactory(null, this.vectorOptions);
     },
+
     _createTileLayer: function() {
         return this._createVectorLayer();
     },
+
     _addTileData: function(tile) {
         if (!tile.parsed) {
             this._worker.process(tile, L.bind(function(tile) {
@@ -144,6 +157,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
             this._addQueue.add(tile);
         }
     },
+
     _addTileDataInternal: function(tile) {
         var tileLayer = this._createTileLayer();
         if (!tile.parsed) {
@@ -159,6 +173,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         this.fire('tileload', {tile: tile});
         this._tileLoaded();
     },
+
     _unloadTile: function(evt) {
         L.TileLayer.Ajax.prototype._unloadTile.apply(this, arguments);
 
@@ -189,6 +204,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
             this._tileCache.put(tile);
         }
     },
+
     _reset: function(e) {
 
         // Save existing tiles for Overzoom
@@ -203,6 +219,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         this._worker.clear();
     }
 });
+
 
 L.extend(L.TileLayer.Vector, {
     parseData: function(data) {
