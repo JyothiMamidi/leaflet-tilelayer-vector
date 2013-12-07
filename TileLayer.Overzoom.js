@@ -52,6 +52,18 @@ L.TileLayer.Overzoom = {
             }
         }
         return result;
+    },
+
+    _shouldRemoveLayersAtZoom: function(zoom) {
+        if (this.options.serverZooms) {
+            if (this._map.getZoom() in this.options.serverZooms) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+        return true;
     }
 };
 

@@ -101,8 +101,8 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         // factory function to create the vector tile layers (defaults to L.GeoJSON)
         layerFactory: L.geoJson,
         // factory function to create a web worker for parsing/preparing tile data
-        //workerFactory: L.communistWorker
-        workerFactory: L.noWorker
+        workerFactory: L.communistWorker
+        //workerFactory: L.noWorker
     },
 
     initialize: function (url, options, vectorOptions) {
@@ -189,13 +189,7 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
             this._tileLoaded();
         }
         if (tileLayer && this.vectorLayer.hasLayer(tileLayer)) {
-            // Only remove layer if we're not about to add again
-            if (this.options.serverZooms) {
-                if (this._map.getZoom() in this.options.serverZooms) {
-                    this.vectorLayer.removeLayer(tileLayer);
-                }
-            }
-            else {
+            if (this._shouldRemoveLayersAtZoom(this._map.getZoom())) {
                 this.vectorLayer.removeLayer(tileLayer);
             }
         }
@@ -203,6 +197,10 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         if (tile.parsed) {
             this._tileCache.put(tile);
         }
+    },
+
+    _shouldRemoveLayersAtZoom: function(zoom) {
+        return true;
     },
 
     _reset: function(e) {
