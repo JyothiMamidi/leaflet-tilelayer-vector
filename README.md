@@ -1,8 +1,14 @@
-# (Development) Fork
+# Leaflet GeoJSON Tile Layer
 
--work in progress-
+Renders GeoJSON tiles on an L.GeoJSON layer
 
-### additions to leaflet-tilelayer-geojson:
+This is a fork of [nrenner's development branch](https://github.com/nrenner/leaflet-tilelayer-vector)
+of [leaflet-tilelayer-geojson](https://github.com/glenrobertson/leaflet-tilelayer-geojson).
+The main addition is some logic around removing and adding layers so that 
+"overzoomed" tiles are retained to avoid the flickering that happens on zoom in 
+nrenner's branch, even when new data is not being loaded.
+
+## nrenner's additions to leaflet-tilelayer-geojson:
 
 * based on Leaflet Path vector classes instead of GeoJSON
 * async queue for adding tiles to let UI render each tile immediately
@@ -11,20 +17,6 @@
 * overzooming (reuse tiles for multiple zoom levels)
 * loading/progress tiles
 * Web Worker support
-
-### Todo
-
-* cleanup, refactoring<br>
-configurable modules for tile loading (streams?): e.g. request > worker > queue > add
-* debug layer
-* discuss if and what to merge back
-
-### Use Case
-
-Developed for [Mapsplit map](https://github.com/nrenner/mapsplit-map) using OSM PBF vector tiles.
-
-# Leaflet GeoJSON Tile Layer
-Renders GeoJSON tiles on an L.GeoJSON layer
 
 ## Example usage
 The following example shows a GeoJSON Tile Layer for tiles with duplicate features.
