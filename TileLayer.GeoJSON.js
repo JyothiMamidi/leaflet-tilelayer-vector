@@ -203,15 +203,17 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
         return true;
     },
 
-    _reset: function(e) {
+    _retainTiles: function() {
+        return {};
+    },
 
-        // Save existing tiles for Overzoom
-        var oldTiles = L.extend({}, this._tiles);
+    _reset: function(e) {
+        var tilesToRetain = this._retainTiles();
 
         L.TileLayer.Ajax.prototype._reset.apply(this, arguments);
 
-        // Restore old tiles
-        L.extend(this._tiles, oldTiles);
+        // Restore useful tiles
+        L.extend(this._tiles, tilesToRetain);
 
         this._addQueue.clear();
         this._worker.clear();

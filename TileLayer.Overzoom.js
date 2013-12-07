@@ -64,6 +64,19 @@ L.TileLayer.Overzoom = {
             }
         }
         return true;
+    },
+
+    // Only keep the tiles that are going to be useful on the map's current zoom
+    _retainTiles: function() {
+        var tiles = L.extend({}, this._tiles),
+            zoom = this._getServerZoom(this._map.getZoom());
+
+        for (var key in tiles) {
+            if (tiles[key].urlZoom !== zoom) {
+                delete tiles[key];
+            }
+        }
+        return tiles;
     }
 };
 
