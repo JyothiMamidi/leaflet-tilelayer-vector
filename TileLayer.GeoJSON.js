@@ -174,15 +174,31 @@ L.TileLayer.Vector = L.TileLayer.Ajax.extend({
             this._tileLoaded();
         }
         if (tileLayer && this.vectorLayer.hasLayer(tileLayer)) {
-            this.vectorLayer.removeLayer(tileLayer);
+            // Only remove layer if we're not about to add again
+            if (this.options.serverZooms) {
+                if (this._map.getZoom() in this.options.serverZooms) {
+                    this.vectorLayer.removeLayer(tileLayer);
+                }
+            }
+            else {
+                this.vectorLayer.removeLayer(tileLayer);
+            }
         }
 
         if (tile.parsed) {
             this._tileCache.put(tile);
         }
     },
-    _reset: function() {
+    _reset: function(e) {
+
+        // Save existing tiles for Overzoom
+        var oldTiles = L.extend({}, this._tiles);
+
         L.TileLayer.Ajax.prototype._reset.apply(this, arguments);
+
+        // Restore old tiles
+        L.extend(this._tiles, oldTiles);
+
         this._addQueue.clear();
         this._worker.clear();
     }
