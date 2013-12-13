@@ -75,7 +75,15 @@
                     zoom = this._getServerZoom(this._map.getZoom());
 
                 for (var key in tiles) {
+                    // Do not retain tiles that won't be used at this zoom
                     if (tiles[key].urlZoom !== zoom) {
+                        delete tiles[key];
+                    }
+
+                    // Do not retain tiles that don't have a layer. They might
+                    // have been interrupted from loading that layer because the
+                    // user zoomed in or out very quickly, for example.
+                    if (!tiles[key] || !tiles[key].layer) {
                         delete tiles[key];
                     }
                 }
