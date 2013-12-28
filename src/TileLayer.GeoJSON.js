@@ -60,6 +60,10 @@
                         return;
                     }
                     var s = req.status;
+
+                    // Fire dataload for Leaflet.loading
+                    layer._map.fire('dataload');
+
                     if ((s >= 200 && s < 300) || s == 304) {
                         // check if request is about to be aborted, avoid rare error when aborted while parsing
                         if (tile._request) {
@@ -81,6 +85,10 @@
             _loadTile: function (tile, tilePoint) {
                 this._adjustTilePoint(tilePoint);
                 var layer = this;
+
+                // File dataloading for Leaflet.loading
+                layer._map.fire('dataloading');
+
                 var req = new XMLHttpRequest();
                 tile._request = req;
                 req.onreadystatechange = this._xhrHandler(req, layer, tile);
