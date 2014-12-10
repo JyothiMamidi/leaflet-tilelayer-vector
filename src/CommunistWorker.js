@@ -1,3 +1,4 @@
+var communist = require('../lib/communist.min');
 
 (function () {
 

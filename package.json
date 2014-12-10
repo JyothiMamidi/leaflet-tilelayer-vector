@@ -1,7 +1,7 @@
 {
     "name": "leaflet-tilelayer-vector",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Renders vector tiles on a given vector layer, like L.GeoJSON",
-    "main": "index.js",
+    "main": "src/index.js",
     "dependencies": {}
 }

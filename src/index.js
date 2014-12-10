@@ -1,10 +1,13 @@
-// npm/browserify
-// no explicit exports, as classes add themselves to 
-// the global Leaflet package structure 
+// Index for npm/browserify
+//
+// No explicit exports, as classes add themselves to the global Leaflet package
+// structure.
 require('./AbstractWorker.js');
+require('./CommunistWorker.js');
 require('./TileCache.js');
 require('./TileQueue.js');
 require('./TileLayer.GeoJSON.js');
+require('./TileLayer.BBox.js');
 require('./TileLayer.Vector.Unclipped.js');
 require('./TileLayer.Div.js');
 require('./TileLayer.Progress.js');
