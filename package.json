@@ -4,4 +4,8 @@
     "description": "Renders vector tiles on a given vector layer, like L.GeoJSON",
     "main": "src/index.js",
     "dependencies": {}
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:ebrelsford/leaflet-tilelayer-vector.git"
+    },
 }
