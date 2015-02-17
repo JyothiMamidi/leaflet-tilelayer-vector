@@ -1,5 +1,7 @@
 // XHR for binary data (responseType arraybuffer)
 // TODO add as option to L.TileLayer.Ajax? 
+var L = require('leaflet');
+
 L.TileLayer.Ajax.include({
     // XMLHttpRequest handler; closure over the XHR object, the layer, and the tile
     _xhrHandler: function (req, layer, tile) {

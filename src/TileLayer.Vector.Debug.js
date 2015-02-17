@@ -1,3 +1,5 @@
+var L = require('leaflet');
+
 L.TileLayer.Vector.Debug = L.TileLayer.Vector.extend({
     
     _requestCount: 0,

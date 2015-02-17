@@ -1,6 +1,8 @@
 /*
  * Debug layer for L.TileLayer.Vector
  */
+var L = require('leaflet');
+
 L.TileLayer.Debug = L.TileLayer.Div.extend({
     initialize: function (vectorLayer) {
         L.TileLayer.Div.prototype.initialize.call(this, vectorLayer.options);

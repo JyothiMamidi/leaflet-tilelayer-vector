@@ -1,3 +1,5 @@
+var L = require('leaflet');
+
 L.TileLayer.Div = L.TileLayer.extend({
 
     initialize: function (options) {

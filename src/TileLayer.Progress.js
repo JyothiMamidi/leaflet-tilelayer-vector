@@ -1,6 +1,8 @@
 /*
  * Loading progress info layer for L.TileLayer.Vector
  */
+var L = require('leaflet');
+
 L.TileLayer.Progress = L.TileLayer.Div.extend({
     _adding: false,
 
@@ -109,4 +111,3 @@ L.TileLayer.Progress = L.TileLayer.Div.extend({
         }
     }
 });
-

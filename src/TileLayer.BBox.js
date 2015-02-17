@@ -12,7 +12,7 @@ L.TileLayer.Vector.include({
             url += '?';
         }
         if (this.options.getTileQueryString) {
-            url += this.options.getTileQueryString();
+            url += this.options.getTileQueryString.apply(this);
         }
         return url + '&bbox=' + bounds.toBBoxString();
     },

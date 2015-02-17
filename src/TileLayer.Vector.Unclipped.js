@@ -8,6 +8,8 @@
  * Uses a filter to remove duplicates, so a vector layer set with options.layerFactory must support 
  * feature filtering like in L.GeoJSON.
  */
+var L = require('leaflet');
+
 L.TileLayer.Vector.Unclipped = L.TileLayer.Vector.extend({
     // hash: unique featureKey -> number of tiles referencing the feature
     featureRefCounts: {},
