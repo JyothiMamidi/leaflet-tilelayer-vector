@@ -1,7 +1,7 @@
-var communist = require('../lib/communist.min');
+var catiline = require('catiline');
 var L = require('leaflet');
 
-L.CommunistWorker = L.AbstractWorker.extend({
+L.CatilineWorker = L.AbstractWorker.extend({
 
     statics: {
         // number of web workers, not using web workers when falsy
@@ -13,7 +13,7 @@ L.CommunistWorker = L.AbstractWorker.extend({
     },
 
     onAdd: function (map) {
-        this._workers = L.CommunistWorker.createWorkers(this.workerFunc);
+        this._workers = L.CatilineWorker.createWorkers(this.workerFunc);
     },
 
     onRemove: function (map) {
@@ -50,19 +50,19 @@ L.CommunistWorker = L.AbstractWorker.extend({
     }
 });
 
-L.communistWorker = function (workerFunc) {
-    return new L.CommunistWorker(workerFunc);
+L.catilineWorker = function (workerFunc) {
+    return new L.CatilineWorker(workerFunc);
 };
 
-L.extend(L.CommunistWorker, {
+L.extend(L.CatilineWorker, {
     createWorkers: function(workerFunc) {
-        if ( L.CommunistWorker.NUM_WORKERS && typeof Worker === "function" && typeof communist === "function"
-                && !("workers" in L.CommunistWorker)) {
-            L.CommunistWorker.workers = communist({
+        if ( L.CatilineWorker.NUM_WORKERS && typeof Worker === "function" && typeof catiline === "function"
+                && !("workers" in L.CatilineWorker)) {
+            L.CatilineWorker.workers = catiline({
                 //data : L.TileLayer.Vector.parseData
                 data : workerFunc
-            }, L.CommunistWorker.NUM_WORKERS);
+            }, L.CatilineWorker.NUM_WORKERS);
         }
-        return L.CommunistWorker.workers;
+        return L.CatilineWorker.workers;
     }
 });
